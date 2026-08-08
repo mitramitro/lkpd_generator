@@ -1,0 +1,97 @@
+/* Print stylesheet untuk ekspor PDF (Milestone 3).
+   Setiap A4Page (box 210×297mm tetap) dicetak sebagai SATU lembar fisik A4.
+   Semua UI editor (panel, toolbar, zoom, modal, kontainer pengukur) disembunyikan
+   sehingga hanya halaman A4 yang tercetak. */
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  /* Semua elemen screen-only. */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Rantai kontainer preview: lepas dari batas tinggi viewport/flex agar
+     halaman A4 bisa mengalir turun dan dipecah antar lembar. */
+  main,
+  .print-flow {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .print-area {
+    position: static !important;
+    background: #fff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Wrapper zoom (mx-auto space-y-6): hilangkan lebar ter-scale & jarak antar halaman. */
+  .print-area > div {
+    width: auto !important;
+    margin: 0 !important;
+  }
+
+  .print-area > div > * {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Hapus scale zoom & batas wrapper. */
+  .a4-scale {
+    position: static !important;
+    width: 210mm !important;
+    height: auto !important;
+    overflow: visible !important;
+    transform: none !important;
+  }
+
+  /* Satu halaman A4 = satu lembar fisik. */
+  .a4-page {
+    width: 210mm !important;
+    height: 297mm !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    transform: none !important;
+    break-after: page;
+    page-break-after: always;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Halaman terakhir: jangan sisakan lembar kosong di belakangnya. */
+  .a4-scale:last-of-type .a4-page {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  /* Pertahankan warna template (background, border, badge, garis jawaban). */
+  .a4-page * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Judul/heading tidak ditinggalkan sendirian di akhir halaman. */
+  .a4-page h1,
+  .a4-page h2,
+  .a4-page h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Gambar/figure tidak terpotong antar halaman. */
+  .a4-page figure {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

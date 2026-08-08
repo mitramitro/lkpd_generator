@@ -74,6 +74,33 @@ dari folder `api/`.
 - M5.1 memiliki rate limiting sederhana per-instance (bukan production-grade)
   dan belum ada autentikasi/database/history AI.
 
+## Gemini AI — Milestone 5.2 (Generate Soal)
+
+Guru memasukkan materi/topik → AI menyusun soal pilihan ganda / uraian / campuran
+dalam jumlah yang diminta → pratinjau dengan checkbox → sisipkan soal terpilih ke LKPD.
+
+### Alur
+
+1. Di editor, klik **Buat Soal dengan AI** (di atas panel "Konten LKPD").
+2. Isi materi (bisa otomatis dari blok **Materi** LKPD), jumlah soal (1–20),
+   jenis soal, tingkat kesulitan, kelas (opsional), dan bahasa.
+3. Klik **Generate** → soal muncul di pratinjau dengan kunci jawaban untuk guru.
+4. Centang soal yang diinginkan → **Masukkan N Soal ke LKPD** → soal terpasang
+   di akhir dokumen (penomoran otomatis).
+
+### Catatan teknis
+
+- Endpoint: `POST /api/ai/generate-questions`,
+  body `{ source, count, questionType, difficulty, grade?, language? }`.
+- Key tetap server-side saja (`GEMINI_API_KEY`); browser tidak pernah melihatnya.
+- Gemini memakai structured output (`responseSchema` + `responseMimeType: application/json`),
+  lalu server **memvalidasi ulang** respons (format + jumlah soal harus pas) —
+  hasil AI tidak pernah masuk ke dokumen tanpa lolos validasi.
+- Kunci jawaban & pembahasan hanya untuk guru di pratinjau; tidak ikut tercetak.
+- Model default `gemini-flash-latest`, sama seperti M5.1.
+- Batasan M5.2 (sesuai spesifikasi): tidak ada generate gambar, tidak ada chat/history AI,
+  tidak ada Supabase/auth/billing; satu permintaan per klik, tanpa polling/retry.
+
 ## Struktur folder
 
 ```

@@ -28,6 +28,14 @@ export type GeminiResult =
 export interface CallGeminiOptions {
   fetchImpl?: typeof globalThis.fetch
   timeoutMs?: number
+  // M5.2: dukungan structured output. responseSchema dipakai bersama
+  // responseMimeType 'application/json' untuk memaksa Gemini mengembalikan
+  // JSON yang sesuai skema (bukan markdown). Server tetap melakukan validasi
+  // terpisah karena hasil AI tidak boleh dipercaya 100%.
+  systemInstruction?: string
+  responseMimeType?: string
+  responseSchema?: Record<string, unknown>
+  maxOutputTokens?: number
 }
 
 // Menafsirkan respons JSON Gemini. Error JSON Gemini ({ error: { message } })
@@ -75,15 +83,27 @@ export async function callGemini(
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
 
+  const generationConfig: Record<string, unknown> = {
+    temperature: 0.7,
+    maxOutputTokens: options.maxOutputTokens ?? 1024,
+  }
+  if (options.responseMimeType) generationConfig.responseMimeType = options.responseMimeType
+  if (options.responseSchema) generationConfig.responseSchema = options.responseSchema
+
+  const requestBody: Record<string, unknown> = {
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig,
+  }
+  if (options.systemInstruction) {
+    requestBody.systemInstruction = { parts: [{ text: options.systemInstruction }] }
+  }
+
   let response: Response
   try {
     response = await fetchImpl(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
-      }),
+      body: JSON.stringify(requestBody),
       signal: controller.signal,
     })
   } catch (error) {

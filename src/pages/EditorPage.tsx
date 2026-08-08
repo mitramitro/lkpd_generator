@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AddBlockMenu } from '../components/editor/AddBlockMenu'
+import { AiGenerateQuestionsModal } from '../components/editor/AiGenerateQuestionsModal'
 import { BlockList } from '../components/editor/BlockList'
 import { ImportMateriModal } from '../components/editor/ImportMateriModal'
 import { ImportSoalModal } from '../components/editor/ImportSoalModal'
@@ -21,6 +22,7 @@ export function EditorPage() {
   const { id } = useParams<{ id: string }>()
   const [importOpen, setImportOpen] = useState(false)
   const [importMateriOpen, setImportMateriOpen] = useState(false)
+  const [aiOpen, setAiOpen] = useState(false)
 
   const document = useDocumentStore((state) => state.documents.find((doc) => doc.id === id))
   const updateMetadata = useDocumentStore((state) => state.updateMetadata)
@@ -128,6 +130,9 @@ export function EditorPage() {
 
           <Panel title="Konten LKPD">
             <div className="space-y-3">
+              <Button className="w-full" onClick={() => setAiOpen(true)}>
+                ✨ Buat Soal dengan AI
+              </Button>
               <BlockList
                 blocks={document.blocks}
                 documentId={document.id}
@@ -164,6 +169,7 @@ export function EditorPage() {
         onImport={handleImportBlocks}
       />
       <ImportMateriModal open={importMateriOpen} onClose={() => setImportMateriOpen(false)} onImport={handleImportMateri} />
+      <AiGenerateQuestionsModal open={aiOpen} document={document} onClose={() => setAiOpen(false)} onInsert={handleImportBlocks} />
     </div>
   )
 }

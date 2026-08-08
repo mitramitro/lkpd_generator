@@ -182,7 +182,7 @@ test('18. API key tidak pernah muncul di response manapun', async () => {
 test('19. readGeminiConfig: key + model default / override', () => {
   const config = readGeminiConfig({ GEMINI_API_KEY: FAKE_KEY })
   assert.equal(config.apiKey, FAKE_KEY)
-  assert.equal(config.model, 'gemini-flash-latest')
+  assert.equal(config.model, 'gemini-3.5-flash')
   const overridden = readGeminiConfig({ GEMINI_API_KEY: FAKE_KEY, GEMINI_MODEL: 'gemini-2.5-pro' })
   assert.equal(overridden.model, 'gemini-2.5-pro')
   assert.equal(readGeminiConfig({}).apiKey, null)

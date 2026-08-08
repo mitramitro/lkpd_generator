@@ -68,7 +68,7 @@ dari folder `api/`.
 ### Catatan teknis
 
 - Endpoint: `POST /api/ai/test`, body `{ "prompt": string }`.
-- Model default `gemini-flash-latest` (alias stabil), bisa diganti via `GEMINI_MODEL` (server-side).
+- Model default `gemini-3.5-flash`, bisa diganti via `GEMINI_MODEL` (server-side).
 - Dev lokal melayani `/api/ai/test` lewat middleware Vite; produksi lewat
   Serverless Function Vercel — logika handler sama (`server/handler.ts`).
 - M5.1 memiliki rate limiting sederhana per-instance (bukan production-grade)
@@ -97,7 +97,7 @@ dalam jumlah yang diminta → pratinjau dengan checkbox → sisipkan soal terpil
   lalu server **memvalidasi ulang** respons (format + jumlah soal harus pas) —
   hasil AI tidak pernah masuk ke dokumen tanpa lolos validasi.
 - Kunci jawaban & pembahasan hanya untuk guru di pratinjau; tidak ikut tercetak.
-- Model default `gemini-flash-latest`, sama seperti M5.1.
+- Model default `gemini-3.5-flash`, bisa diganti via `GEMINI_MODEL` (server-side).
 - Batasan M5.2 (sesuai spesifikasi): tidak ada generate gambar, tidak ada chat/history AI,
   tidak ada Supabase/auth/billing; satu permintaan per klik, tanpa polling/retry.
 

@@ -2,7 +2,7 @@
 // Dipanggil HANYA dari server; API key dibaca dari environment dan tidak pernah
 // diekspos ke browser. Model dikonfigurasi terpusat agar mudah diganti.
 
-export const DEFAULT_GEMINI_MODEL = 'gemini-flash-latest'
+export const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash'
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
 

@@ -113,7 +113,7 @@ export function A4Preview({ document }: { document: LKPDDocument }) {
 
   return (
     <div className="print-flow flex h-full flex-col">
-      <div className="no-print flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2">
+      <div className="no-print flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b border-slate-200 bg-white px-4 py-2">
         <div className="flex min-w-0 items-center gap-3">
           <SaveStatusBadge status={saveStatus} error={saveError} />
           {backupError && <span className="truncate text-xs text-red-600">{backupError}</span>}

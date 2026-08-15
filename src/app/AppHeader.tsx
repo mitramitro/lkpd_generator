@@ -13,12 +13,6 @@ export function AppHeader() {
         </Link>
         <nav className="flex items-center gap-2">
           <Link
-            to="/ai-test"
-            className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-          >
-            Gemini AI Test
-          </Link>
-          <Link
             to="/create"
             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
           >

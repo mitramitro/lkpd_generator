@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { LKPDDocument } from '../../models/lkpd'
 import { pxPerMm } from '../../lib/measure'
 import { expandUnitToSlices, groupBlocks, paginateSlices, sliceKey } from '../../lib/pagination'
@@ -25,12 +25,31 @@ const HEIGHT_EPSILON_MM = 0.05
 
 export function A4Preview({ document }: { document: LKPDDocument }) {
   const [zoom, setZoom] = useState(0.75)
+  const [fitZoom, setFitZoom] = useState(1.5)
   const [backingUp, setBackingUp] = useState(false)
   const [backupError, setBackupError] = useState<string | null>(null)
+  const areaRef = useRef<HTMLDivElement>(null)
   const saveStatus = useDocumentStore((state) => state.saveStatus)
   const saveError = useDocumentStore((state) => state.saveError)
   const markBackedUp = useDocumentStore((state) => state.markBackedUp)
   const template = getTemplateById(document.templateId)
+
+  // Auto-fit zoom: di layar sempit halaman A4 otomatis mengecil agar seluruh
+  // lebarnya terlihat tanpa scroll horizontal. Di layar lebar fitZoom ≥ MAX_ZOOM,
+  // sehingga zoom manual pengguna tetap berlaku.
+  useEffect(() => {
+    const el = areaRef.current
+    if (!el) return
+    const update = () => {
+      const available = Math.max(0, el.clientWidth - 48)
+      const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, available / (template.pageWidth * pxPerMm())))
+      setFitZoom((prev) => (Math.abs(prev - next) < 0.01 ? prev : next))
+    }
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [template.pageWidth])
 
   const handleBackup = async () => {
     if (backingUp) return
@@ -90,6 +109,8 @@ export function A4Preview({ document }: { document: LKPDDocument }) {
   const zoomOut = () => setZoom((current) => Math.max(MIN_ZOOM, Math.round((current - ZOOM_STEP) * 10) / 10))
   const zoomIn = () => setZoom((current) => Math.min(MAX_ZOOM, Math.round((current + ZOOM_STEP) * 10) / 10))
 
+  const effectiveZoom = Math.min(zoom, fitZoom)
+
   return (
     <div className="print-flow flex h-full flex-col">
       <div className="no-print flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2">
@@ -103,18 +124,24 @@ export function A4Preview({ document }: { document: LKPDDocument }) {
         <div className="flex items-center gap-1">
           <Button variant="secondary" size="sm" onClick={() => void handleBackup()} disabled={backingUp} aria-label="Backup .LKPD">
             <DownloadIcon />
-            {backingUp ? 'Menyiapkan…' : 'Backup .LKPD'}
+            <span className="hidden sm:inline">{backingUp ? 'Menyiapkan…' : 'Backup .LKPD'}</span>
           </Button>
           <Button variant="primary" size="sm" onClick={() => window.print()} aria-label="Unduh PDF">
             <FileTextIcon />
-            Unduh PDF
+            <span className="hidden sm:inline">Unduh PDF</span>
           </Button>
           <span className="mx-1 h-4 w-px bg-slate-200" />
           <Button variant="secondary" size="sm" onClick={zoomOut} disabled={zoom <= MIN_ZOOM} aria-label="Perkecil">
             −
           </Button>
-          <span className="w-14 text-center text-sm text-slate-600">{Math.round(zoom * 100)}%</span>
-          <Button variant="secondary" size="sm" onClick={zoomIn} disabled={zoom >= MAX_ZOOM} aria-label="Perbesar">
+          <span className="w-14 text-center text-sm text-slate-600">{Math.round(effectiveZoom * 100)}%</span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={zoomIn}
+            disabled={zoom >= MAX_ZOOM || zoom >= fitZoom}
+            aria-label="Perbesar"
+          >
             +
           </Button>
         </div>
@@ -148,8 +175,8 @@ export function A4Preview({ document }: { document: LKPDDocument }) {
         </div>
       </div>
 
-      <div className="print-area flex-1 overflow-auto bg-slate-200 p-6">
-        <div className="mx-auto space-y-6" style={{ width: `${template.pageWidth * zoom}mm` }}>
+      <div ref={areaRef} className="print-area flex-1 overflow-auto bg-slate-200 p-6">
+        <div className="mx-auto space-y-6" style={{ width: `${template.pageWidth * effectiveZoom}mm` }}>
           {pages.map((pageSlices, index) => (
             <A4Page
               key={`${index}-${document.id}`}
@@ -157,7 +184,7 @@ export function A4Preview({ document }: { document: LKPDDocument }) {
               metadata={document.metadata}
               slices={pageSlices}
               pageNumber={index + 1}
-              zoom={zoom}
+              zoom={effectiveZoom}
             />
           ))}
           {pages.length === 0 && (

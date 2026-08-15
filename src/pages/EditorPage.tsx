@@ -23,6 +23,7 @@ export function EditorPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [importMateriOpen, setImportMateriOpen] = useState(false)
   const [aiOpen, setAiOpen] = useState(false)
+  const [mobileView, setMobileView] = useState<'edit' | 'preview'>('edit')
 
   const document = useDocumentStore((state) => state.documents.find((doc) => doc.id === id))
   const updateMetadata = useDocumentStore((state) => state.updateMetadata)
@@ -92,7 +93,27 @@ export function EditorPage() {
 
   return (
     <div className="print-flow flex h-[calc(100vh-3.5rem)] flex-col lg:flex-row">
-      <aside className="no-print w-full shrink-0 overflow-y-auto border-r border-slate-200 bg-white lg:w-[400px]">
+      <div className="no-print flex shrink-0 border-b border-slate-200 bg-white lg:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileView('edit')}
+          className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${mobileView === 'edit' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500'}`}
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileView('preview')}
+          className={`flex flex-1 items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${mobileView === 'preview' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500'}`}
+        >
+          <FileTextIcon />
+          Preview
+        </button>
+      </div>
+
+      <aside
+        className={`no-print w-full overflow-y-auto border-r border-slate-200 bg-white ${mobileView === 'edit' ? 'block min-h-0 flex-1' : 'hidden'} lg:block lg:w-[400px] lg:flex-none`}
+      >
         <div className="space-y-5 p-4">
           <div className="flex items-center justify-between gap-2">
             <Link
@@ -158,7 +179,7 @@ export function EditorPage() {
         </div>
       </aside>
 
-      <main className="h-[60vh] min-w-0 flex-1 overflow-hidden lg:h-auto">
+      <main className={`min-w-0 flex-1 overflow-hidden ${mobileView === 'preview' ? 'flex min-h-0' : 'hidden'} lg:block lg:h-auto`}>
         <A4Preview document={document} />
       </main>
 

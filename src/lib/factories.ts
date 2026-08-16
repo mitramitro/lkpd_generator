@@ -29,7 +29,7 @@ export function createMultipleChoiceQuestion(): MultipleChoiceQuestion {
     number: 0,
     questionType: 'multiple_choice',
     text: '',
-    options: ['', '', '', ''],
+    options: ['', '', '', '', ''],
   }
 }
 

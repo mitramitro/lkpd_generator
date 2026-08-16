@@ -34,7 +34,7 @@ interface OpenQuestion {
 
 // Parser deterministik (tanpa AI) untuk format soal yang umum.
 // Toleran terhadap: nomor dengan ".", ")", "Soal 1.", blank lines,
-// multiple spaces, opsi A-D atau a-d.
+// multiple spaces, opsi A-E atau a-e.
 export function parseQuestions(input: string): ParseResult {
   const questions: ParsedQuestion[] = []
   const unrecognized: string[] = []

@@ -57,7 +57,8 @@ export const AI_COUNT_ERROR = 'Hasil AI menghasilkan jumlah soal tidak sesuai pe
 
 const QUESTION_TYPES = new Set(['multiple_choice', 'essay', 'mixed'])
 const DIFFICULTIES = new Set(['easy', 'medium', 'hard'])
-const MC_LABELS = new Set(['A', 'B', 'C', 'D'])
+export const MC_LABELS = ['A', 'B', 'C', 'D', 'E'] as const
+const MC_LABEL_SET = new Set<string>(MC_LABELS)
 
 const QUESTION_TYPE_LABELS: Record<AiRequestQuestionType, string> = {
   multiple_choice: 'pilihan ganda',
@@ -151,7 +152,15 @@ export function buildGenerateQuestionsSystemInstruction(request: AiGenerateReque
     lines.push('- Tidak ada informasi kelas; jangan mengarang jenjang/jurusan tertentu.')
   }
   lines.push(
-    '- Untuk soal pilihan ganda: tepat 4 opsi berlabel A, B, C, D; hanya satu jawaban benar; distractor harus masuk akal; field "answer" berisi huruf (A/B/C/D).',
+    '- Untuk soal pilihan ganda, HARUS menghasilkan TEPAT 5 opsi jawaban yang berlabel A, B, C, D, dan E.',
+    '- Jangan menghasilkan hanya A-D. Jangan menghasilkan opsi F.',
+    '- Satu dan hanya satu jawaban benar.',
+    '- Field "answer" harus salah satu dari A, B, C, D, atau E.',
+    '- Field "explanation" WAJIB diisi dan menjelaskan alasan jawaban tersebut benar.',
+    '- Semua opsi harus relevan dengan pertanyaan; hanya satu jawaban paling tepat.',
+    '- Pengecoh (opsi yang salah) harus masuk akal dan tidak mudah ditebak karena panjang atau struktur yang berbeda.',
+    '- Jangan memakai pola "semua jawaban benar" kecuali memang diminta, dan jangan memakai "A dan B benar" sebagai pola jawaban.',
+    '- Opsi E harus memiliki kualitas yang sama dengan opsi A-D.',
     '- Untuk soal uraian: field "answer" berisi jawaban acuan atau rubrik sederhana.',
     '- Sertakan field "explanation" singkat sebagai pembahasan untuk guru.',
     `- Bahasa output: ${request.language}.`,
@@ -190,7 +199,8 @@ export const GENERATE_QUESTIONS_SCHEMA: Record<string, unknown> = {
               },
               required: ['label', 'text'],
             },
-            maxItems: 4,
+            minItems: 5,
+            maxItems: 5,
           },
           answer: { type: 'STRING' },
           explanation: { type: 'STRING' },
@@ -216,14 +226,18 @@ export function validateAiGeneratedQuestion(value: unknown): value is AiGenerate
   if (!isRecord(value)) return false
   if (value.type === 'multiple_choice') {
     if (!isNonEmptyString(value.text)) return false
-    if (!Array.isArray(value.options) || value.options.length !== 4) return false
+    if (!Array.isArray(value.options) || value.options.length !== MC_LABELS.length) return false
+    const seen = new Set<string>()
     for (const option of value.options) {
       if (!isRecord(option)) return false
-      if (typeof option.label !== 'string' || !MC_LABELS.has(option.label)) return false
+      if (typeof option.label !== 'string' || !MC_LABEL_SET.has(option.label)) return false
       if (!isNonEmptyString(option.text)) return false
+      const normalized = option.text.trim().toLowerCase()
+      if (seen.has(normalized)) return false
+      seen.add(normalized)
     }
-    if (typeof value.answer !== 'string' || !MC_LABELS.has(value.answer)) return false
-    if (value.explanation !== undefined && typeof value.explanation !== 'string') return false
+    if (typeof value.answer !== 'string' || !MC_LABEL_SET.has(value.answer)) return false
+    if (!isNonEmptyString(value.explanation)) return false
     return true
   }
   if (value.type === 'essay') {

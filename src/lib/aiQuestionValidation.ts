@@ -8,7 +8,8 @@ export type AiQuestionsValidationResult =
   | { ok: false; error: string }
 
 const AI_FORMAT_ERROR = 'Hasil AI tidak sesuai format soal yang dibutuhkan.'
-const MC_LABELS = new Set(['A', 'B', 'C', 'D'])
+const MC_LABELS = ['A', 'B', 'C', 'D', 'E'] as const
+const MC_LABEL_SET = new Set<string>(MC_LABELS)
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -22,13 +23,18 @@ export function isValidAiGeneratedQuestion(value: unknown): value is AiGenerated
   if (!isRecord(value)) return false
   if (value.type === 'multiple_choice') {
     if (!isNonEmptyString(value.text)) return false
-    if (!Array.isArray(value.options) || value.options.length !== 4) return false
+    if (!Array.isArray(value.options) || value.options.length !== MC_LABELS.length) return false
+    const seen = new Set<string>()
     for (const option of value.options) {
       if (!isRecord(option)) return false
-      if (typeof option.label !== 'string' || !MC_LABELS.has(option.label)) return false
+      if (typeof option.label !== 'string' || !MC_LABEL_SET.has(option.label)) return false
       if (!isNonEmptyString(option.text)) return false
+      const normalized = option.text.trim().toLowerCase()
+      if (seen.has(normalized)) return false
+      seen.add(normalized)
     }
-    if (typeof value.answer !== 'string' || !MC_LABELS.has(value.answer)) return false
+    if (typeof value.answer !== 'string' || !MC_LABEL_SET.has(value.answer)) return false
+    if (!isNonEmptyString(value.explanation)) return false
     return true
   }
   if (value.type === 'essay') {

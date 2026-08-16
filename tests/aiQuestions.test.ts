@@ -6,6 +6,8 @@ import {
   AI_FORMAT_ERROR,
   buildGenerateQuestionsSystemInstruction,
   buildGenerateQuestionsUserPrompt,
+  GENERATE_QUESTIONS_SCHEMA,
+  MC_LABELS,
   MAX_COUNT,
   MAX_SOURCE_LENGTH,
   parseGeneratedQuestionsResponse,
@@ -32,6 +34,7 @@ const validMc: AiGeneratedQuestion = {
     { label: 'B', text: 'Menyimpan data' },
     { label: 'C', text: 'Mencetak dokumen' },
     { label: 'D', text: 'Menyediakan internet tanpa kabel' },
+    { label: 'E', text: 'Mengubah tegangan listrik' },
   ],
   answer: 'A',
   explanation: 'Switch menghubungkan banyak perangkat dalam satu jaringan.',
@@ -142,20 +145,21 @@ test('12. response mixed (MC + essay) valid diterima', () => {
   if (result.ok) assert.equal(result.questions.length, 2)
 })
 
-test('13. MC kurang dari 4 opsi ditolak', () => {
-  const bad = { ...validMc, options: validMc.options.slice(0, 3) }
+test('13. MC kurang dari 5 opsi ditolak', () => {
+  const bad = { ...validMc, options: validMc.options.slice(0, 4) }
   assert.equal(validateAiGeneratedQuestion(bad), false)
   assert.equal(validateAiQuestionsArray([bad]).ok, false)
 })
 
-test('14. MC lebih dari 4 opsi ditolak', () => {
-  const bad = { ...validMc, options: [...validMc.options, { label: 'E', text: 'opsi ekstra' }] }
+test('14. MC lebih dari 5 opsi ditolak', () => {
+  const bad = { ...validMc, options: [...validMc.options, { label: 'F', text: 'opsi ekstra' }] }
   assert.equal(validateAiGeneratedQuestion(bad), false)
 })
 
-test('15. answer bukan A/B/C/D ditolak', () => {
-  assert.equal(validateAiGeneratedQuestion({ ...validMc, answer: 'E' }), false)
+test('15. answer bukan A/B/C/D/E ditolak; answer E diterima', () => {
+  assert.equal(validateAiGeneratedQuestion({ ...validMc, answer: 'F' }), false)
   assert.equal(validateAiGeneratedQuestion({ ...validMc, answer: '' }), false)
+  assert.equal(validateAiGeneratedQuestion({ ...validMc, answer: 'E' }), true)
 })
 
 test('16. teks soal kosong ditolak', () => {
@@ -358,6 +362,136 @@ test('37. selection: default semua terpilih, toggle, set all, count', () => {
   assert.equal(countSelected(setAll(initial, false)), 0)
   assert.equal(countSelected(initialSelection(0)), 0)
   assert.equal(allSelected([]), false)
+})
+
+// ---- H. AI 5 opsi A-E ----
+
+test('38. MC dengan tepat 5 opsi A-E diterima; answer E diterima', () => {
+  const five = { ...validMc, answer: 'E' }
+  assert.equal(validateAiGeneratedQuestion(five), true)
+  const result = validateAiQuestionsArray([five])
+  assert.equal(result.ok, true)
+  if (result.ok) {
+    const question = result.questions[0]
+    assert.equal(question.type === 'multiple_choice' ? question.options.length : 0, 5)
+    assert.deepEqual(question.type === 'multiple_choice' ? question.options.map((o) => o.label) : [], [...MC_LABELS])
+  }
+})
+
+test('39. MC 4 opsi A-D ditolak oleh validasi respons AI baru', () => {
+  const four = { ...validMc, options: validMc.options.slice(0, 4) }
+  assert.equal(validateAiGeneratedQuestion(four), false)
+  const parsed = parseGeneratedQuestionsResponse(JSON.stringify({ questions: [four] }), 1)
+  assert.equal(parsed.ok, false)
+})
+
+test('40. MC 6 opsi A-F ditolak (tidak dipotong otomatis)', () => {
+  const six = { ...validMc, options: [...validMc.options, { label: 'F', text: 'opsi keenam' }] }
+  assert.equal(validateAiGeneratedQuestion(six), false)
+  const parsed = parseGeneratedQuestionsResponse(JSON.stringify({ questions: [six] }), 1)
+  assert.equal(parsed.ok, false)
+})
+
+test('41. MC A-E lengkap tetapi answer = F ditolak', () => {
+  assert.equal(validateAiGeneratedQuestion({ ...validMc, answer: 'F' }), false)
+})
+
+test('42. MC opsi E kosong ditolak', () => {
+  const bad = { ...validMc, options: [...validMc.options.slice(0, 4), { label: 'E', text: '   ' }] }
+  assert.equal(validateAiGeneratedQuestion(bad), false)
+})
+
+test('43. MC duplicate option (teks sama) ditolak', () => {
+  const bad = {
+    ...validMc,
+    options: [
+      { label: 'A', text: 'Opsi sama' },
+      { label: 'B', text: 'opsi sama' },
+      { label: 'C', text: 'Opsi ketiga' },
+      { label: 'D', text: 'Opsi keempat' },
+      { label: 'E', text: 'Opsi kelima' },
+    ],
+  }
+  assert.equal(validateAiGeneratedQuestion(bad), false)
+})
+
+test('44. MC explanation wajib: kosong/tidak ada -> ditolak; tersedia -> diterima', () => {
+  assert.equal(validateAiGeneratedQuestion({ ...validMc, explanation: '   ' }), false)
+  const withoutExplanation = { ...validMc }
+  delete withoutExplanation.explanation
+  assert.equal(validateAiGeneratedQuestion(withoutExplanation), false)
+  assert.equal(validateAiGeneratedQuestion(validMc), true)
+})
+
+test('45. factory AI MC A-E menghasilkan tepat 5 opsi; E tidak hilang', () => {
+  const block = createQuestionBlockFromAi(validMc) as MultipleChoiceQuestion
+  assert.equal(block.options.length, 5)
+  assert.equal(block.options[4], validMc.options[4].text)
+  assert.deepEqual(block.options, validMc.options.map((option) => option.text))
+})
+
+test('46. soal lama A-D (4 opsi) tetap utuh di document flow', () => {
+  const oldQuestion: MultipleChoiceQuestion = {
+    id: 'q-old',
+    type: 'question',
+    number: 0,
+    questionType: 'multiple_choice',
+    text: 'Soal lama sebelum fitur 5 opsi',
+    options: ['a', 'b', 'c', 'd'],
+  }
+  const [renumbered] = renumberQuestions([oldQuestion])
+  assert.ok(renumbered.type === 'question' && renumbered.questionType === 'multiple_choice')
+  if (renumbered.type === 'question' && renumbered.questionType === 'multiple_choice') {
+    assert.equal(renumbered.number, 1)
+    assert.equal(renumbered.options.length, 4)
+    assert.deepEqual(renumbered.options, ['a', 'b', 'c', 'd'])
+  }
+})
+
+test('47. selection tetap bekerja dengan 5 soal / opsi baru', () => {
+  const selection = initialSelection(5)
+  assert.deepEqual(selection, [true, true, true, true, true])
+  assert.equal(countSelected(selection), 5)
+  assert.equal(allSelected(selection), true)
+  assert.deepEqual(toggleAt(selection, 4), [true, true, true, true, false])
+})
+
+test('48. data preview: labels opsi MC selalu A-E (round-trip validasi)', () => {
+  const result = validateAiQuestionsArray([validMc])
+  assert.equal(result.ok, true)
+  if (result.ok) {
+    const question = result.questions[0]
+    if (question.type === 'multiple_choice') {
+      assert.deepEqual(question.options.map((option) => option.label), ['A', 'B', 'C', 'D', 'E'])
+    }
+  }
+})
+
+test('49. schema structured output Gemini memaksa 5 opsi (min & max)', () => {
+  const schema = GENERATE_QUESTIONS_SCHEMA as unknown as {
+    properties: {
+      questions: {
+        items: {
+          properties: {
+            options: { minItems: number; maxItems: number }
+          }
+        }
+      }
+    }
+  }
+  const options = schema.properties.questions.items.properties.options
+  assert.equal(options.minItems, 5)
+  assert.equal(options.maxItems, 5)
+})
+
+test('50. system instruction MC menegaskan 5 opsi A-E dan larangan A-D/F', () => {
+  const request = { source: 'materi X', questionType: 'multiple_choice' as const, count: 2, difficulty: 'medium' as const, language: 'id' }
+  const instruction = buildGenerateQuestionsSystemInstruction(request)
+  assert.match(instruction, /TEPAT 5 opsi/)
+  assert.match(instruction, /A, B, C, D, dan E/)
+  assert.match(instruction, /Jangan menghasilkan hanya A-D/)
+  assert.match(instruction, /opsi F/)
+  assert.match(instruction, /A, B, C, D, atau E/)
 })
 
 let passed = 0

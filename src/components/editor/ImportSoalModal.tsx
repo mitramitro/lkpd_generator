@@ -80,11 +80,11 @@ export function ImportSoalModal({ open, existingCount, onClose, onImport }: Impo
             value={input}
             onChange={(event) => setInput(event.target.value)}
             rows={10}
-            placeholder={'1. Teks soal...\nA. Opsi A\nB. Opsi B\nC. Opsi C\nD. Opsi D\n\n2) Soal uraian tanpa pilihan...'}
+            placeholder={'1. Teks soal...\nA. Opsi A\nB. Opsi B\nC. Opsi C\nD. Opsi D\nE. Opsi E\n\n2) Soal uraian tanpa pilihan...'}
           />
           <p className="mt-1 text-xs text-slate-400">
             Format yang dikenali: &quot;1.&quot;, &quot;1)&quot;, &quot;Soal 1.&quot; untuk nomor; &quot;A.&quot;, &quot;b)&quot;
-            untuk opsi (A–D / a–d). Soal tanpa opsi menjadi Uraian dengan baris jawaban otomatis.
+            untuk opsi (A–E / a–e). Soal tanpa opsi menjadi Uraian dengan baris jawaban otomatis.
           </p>
         </div>
 

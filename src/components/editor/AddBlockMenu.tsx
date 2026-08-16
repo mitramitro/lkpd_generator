@@ -66,7 +66,7 @@ const OPTIONS: BlockTypeOption[] = [
   },
 ]
 
-export function AddBlockMenu({ onAdd }: { onAdd: (block: Block) => void }) {
+export function AddBlockMenu({ onAdd, size = 'md' }: { onAdd: (block: Block) => void; size?: 'sm' | 'md' }) {
   const [open, setOpen] = useState(false)
 
   const add = (option: BlockTypeOption) => {
@@ -76,26 +76,28 @@ export function AddBlockMenu({ onAdd }: { onAdd: (block: Block) => void }) {
 
   return (
     <div className="relative">
-      <Button className="w-full" onClick={() => setOpen((current) => !current)}>
+      <Button className="w-full" size={size} onClick={() => setOpen((current) => !current)}>
         <PlusIcon />
         Tambah Block
       </Button>
       {open && (
-        <div className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-          {OPTIONS.map((option) => (
-            <button
-              key={option.key}
-              type="button"
-              onClick={() => add(option)}
-              className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-slate-50"
-            >
-              <span className="text-slate-400">{option.icon}</span>
-              <span>
-                <span className="block text-sm font-medium text-slate-800">{option.label}</span>
-                <span className="block text-xs text-slate-500">{option.description}</span>
-              </span>
-            </button>
-          ))}
+        <div className="absolute left-0 top-full z-20 mt-2 w-[300px] max-w-[calc(100vw-24px)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+          <div className="max-h-[70vh] divide-y divide-slate-100 overflow-y-auto">
+            {OPTIONS.map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => add(option)}
+                className="flex w-full items-start gap-3 px-3 py-2 text-left transition-colors hover:bg-slate-50"
+              >
+                <span className="flex w-8 shrink-0 items-center justify-center pt-0.5 text-slate-400">{option.icon}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block whitespace-nowrap text-sm font-medium text-slate-800">{option.label}</span>
+                  <span className="block text-xs leading-snug text-slate-500">{option.description}</span>
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>

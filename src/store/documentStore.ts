@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Block, LKPDDocument, LKPDMetadata } from '../models/lkpd'
+import type { Block, CustomBackgroundMeta, LKPDDocument, LKPDMetadata, PageBackgroundConfig } from '../models/lkpd'
 import { createEmptyDocument, renumberQuestions } from '../lib/factories'
 import { applyTemplate } from '../lib/template'
 import { imageIdFromReference, isImageReference, materializeDataUrls } from '../lib/imageStorage'
@@ -79,6 +79,9 @@ interface DocumentStore {
   addDocument: (document: LKPDDocument) => Promise<void>
   updateMetadata: (id: string, metadata: LKPDMetadata) => void
   setTemplate: (id: string, templateId: string) => void
+  setDocumentBackground: (id: string, config?: PageBackgroundConfig) => void
+  setPageBackground: (id: string, pageNumber: number, config?: PageBackgroundConfig) => void
+  addCustomBackground: (id: string, meta: CustomBackgroundMeta) => void
   addBlock: (id: string, block: Block) => void
   insertBlockAfter: (id: string, afterBlockId: string, block: Block) => void
   replaceBlock: (id: string, block: Block) => void
@@ -143,6 +146,49 @@ export const useDocumentStore = create<DocumentStore>((set) => ({
       documents: state.documents.map((document) => {
         if (document.id !== id) return document
         const next = applyTemplate(document, templateId)
+        schedulePersist(id)
+        return next
+      }),
+    }))
+  },
+
+  // M5.3.1 — background dokumen (default semua halaman).
+  setDocumentBackground: (id, config) => {
+    set((state) => ({
+      documents: state.documents.map((document) => {
+        if (document.id !== id) return document
+        const next = touch({ ...document, background: config })
+        schedulePersist(id)
+        return next
+      }),
+    }))
+  },
+
+  // M5.3.1 — override background satu halaman. config undefined = hapus override
+  // (halaman kembali mengikuti default dokumen/template).
+  setPageBackground: (id, pageNumber, config) => {
+    set((state) => ({
+      documents: state.documents.map((document) => {
+        if (document.id !== id) return document
+        const pageBackgrounds = { ...(document.pageBackgrounds ?? {}) }
+        if (config) pageBackgrounds[String(pageNumber)] = config
+        else delete pageBackgrounds[String(pageNumber)]
+        const next = touch({ ...document, pageBackgrounds })
+        schedulePersist(id)
+        return next
+      }),
+    }))
+  },
+
+  // M5.3.1 — daftar metadata background custom (blob sudah disimpan oleh
+  // backgroundService sebelum action ini dipanggil).
+  addCustomBackground: (id, meta) => {
+    set((state) => ({
+      documents: state.documents.map((document) => {
+        if (document.id !== id) return document
+        const customBackgrounds = [...(document.customBackgrounds ?? [])]
+        if (!customBackgrounds.some((item) => item.id === meta.id)) customBackgrounds.push(meta)
+        const next = touch({ ...document, customBackgrounds })
         schedulePersist(id)
         return next
       }),

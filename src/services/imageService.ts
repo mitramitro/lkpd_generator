@@ -102,6 +102,9 @@ export async function recompressStoredImages(): Promise<number> {
   const images = await repo.listImages()
   let count = 0
   for (const record of images) {
+    // Background custom (M5.3.1) TIDAK pernah direkompresi: resolusi & kualitas
+    // asli dipertahankan karena dipakai sebagai latar halaman full-bleed.
+    if (record.kind === 'background') continue
     if (record.mimeType === 'image/webp') continue
     if (record.blob.size < RECOMPRESS_MIN_BYTES) continue
     try {

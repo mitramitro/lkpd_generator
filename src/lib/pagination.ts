@@ -1,8 +1,8 @@
 import type { Block, ImageBlock, ImageGalleryBlock, MaterialBlock, QuestionBlock } from '../models/lkpd'
-import type { LKPDTemplate } from '../models/template'
+import type { LKPDTemplate, TemplateContentArea } from '../models/template'
 import { resolveGalleryColumns, resolveGalleryPlacement, splitImagesIntoRows, type GalleryRow } from './gallery'
 import { imageFlowWidthPercent } from './imagePlacement'
-import { contentWidthMm, usableContentHeightMm } from './template'
+import { contentWidthMmFor, contentAreaOf, usableContentHeightMmFor } from './template'
 
 const HEADER_SPACE_MM = 14
 const FOOTER_SPACE_MM = 12
@@ -403,18 +403,21 @@ export function paginateSlices(
   headerMm: number,
   footerMm: number,
   contentPadMm = CONTENT_PAD_MM,
+  areaOverride?: TemplateContentArea,
 ): PageSlice[][] {
-  const usableHeight = usableContentHeightMm(template, headerMm, footerMm, contentPadMm)
-  const contentWidth = contentWidthMm(template)
+  const area = areaOverride ?? contentAreaOf(template)
+  const usableHeight = usableContentHeightMmFor(template.pageHeight, area, headerMm, footerMm, contentPadMm)
+  const contentWidth = contentWidthMmFor(template.pageWidth, area)
   return buildPages(slices, template, usableHeight, contentWidth, (id) => heights.get(id))
 }
 
 // Estimasi halaman (dipakai Dashboard) berbasis estimasi tinggi, tanpa DOM.
 // Menggunakan HEADER/FOOTER/CONTENT_PAD yang sama dengan default paginateSlices
 // dan lebar dari contentArea sehingga jumlah halaman preview == print == dashboard.
-export function paginateBlocks(blocks: Block[], template: LKPDTemplate): PageSlice[][] {
-  const usableHeight = usableContentHeightMm(template, HEADER_SPACE_MM, FOOTER_SPACE_MM, CONTENT_PAD_MM)
-  const contentWidth = contentWidthMm(template)
+export function paginateBlocks(blocks: Block[], template: LKPDTemplate, areaOverride?: TemplateContentArea): PageSlice[][] {
+  const area = areaOverride ?? contentAreaOf(template)
+  const usableHeight = usableContentHeightMmFor(template.pageHeight, area, HEADER_SPACE_MM, FOOTER_SPACE_MM, CONTENT_PAD_MM)
+  const contentWidth = contentWidthMmFor(template.pageWidth, area)
   const units = groupBlocks(blocks)
   const slices = units.flatMap((unit) => expandUnitToSlices(unit, contentWidth))
   return buildPages(slices, template, usableHeight, contentWidth, () => undefined)

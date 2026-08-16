@@ -1,7 +1,10 @@
 import type { LKPDMetadata } from '../../models/lkpd'
 import type { LKPDTemplate } from '../../models/template'
 import { sliceKey, type PageSlice } from '../../lib/pagination'
-import { contentAreaOf, contentWidthMm as templateContentWidthMm } from '../../lib/template'
+import { contentWidthMmFor } from '../../lib/template'
+import { makeImageReference } from '../../lib/imageStorage'
+import { useImageSource } from '../../hooks/useImageSource'
+import type { ResolvedPageBackground } from '../../lib/backgrounds'
 import { SliceView } from './UnitView'
 import { PageFooter } from './PageFooter'
 import { PageHeader } from './PageHeader'
@@ -12,13 +15,19 @@ interface A4PageProps {
   slices: PageSlice[]
   pageNumber: number
   zoom: number
+  // M5.3.1 — background halaman ini (sudah di-resolve oleh A4Preview).
+  pageBackground: ResolvedPageBackground
 }
 
-export function A4Page({ template, metadata, slices, pageNumber, zoom }: A4PageProps) {
-  // Lebar konten dan padding halaman selalu mengikuti safe area template
-  // (contentArea untuk template bergambar, margins untuk template lama).
-  const contentWidthMm = templateContentWidthMm(template)
-  const pagePad = contentAreaOf(template)
+export function A4Page({ template, metadata, slices, pageNumber, zoom, pageBackground }: A4PageProps) {
+  // Lebar konten & padding halaman mengikuti safe area background halaman ini
+  // (template / default dokumen / override per halaman).
+  const { contentArea, builtinUrl, customImageId } = pageBackground
+  const contentWidthMm = contentWidthMmFor(template.pageWidth, contentArea)
+
+  // Background custom dimuat dari IndexedDB sebagai object URL (auto-revoke).
+  const customBackground = useImageSource(customImageId ? makeImageReference(customImageId) : undefined)
+  const backgroundUrl = customImageId ? customBackground.src : builtinUrl
 
   // Galeri dianggap lanjutan bila baris pertamanya memulai halaman ini dan
   // bagian soal-nya (teks/opsi) ada di halaman lain — atau galeri lepas.
@@ -43,7 +52,7 @@ export function A4Page({ template, metadata, slices, pageNumber, zoom }: A4PageP
           background: template.colors.background,
           color: template.colors.text,
           fontFamily: template.typography.fontFamily,
-          padding: `${pagePad.top}mm ${pagePad.right}mm ${pagePad.bottom}mm ${pagePad.left}mm`,
+          padding: `${contentArea.top}mm ${contentArea.right}mm ${contentArea.bottom}mm ${contentArea.left}mm`,
           transform: `scale(${zoom})`,
           transformOrigin: 'top left',
           boxShadow: '0 4px 20px rgba(15, 23, 42, 0.15)',
@@ -51,10 +60,10 @@ export function A4Page({ template, metadata, slices, pageNumber, zoom }: A4PageP
           flexDirection: 'column',
         }}
       >
-        {/* Latar dekoratif halaman (M5.3). Layer terpisah di bawah konten:
-            tidak menjadi block, tidak ikut pagination, tidak menghalangi
-            interaksi konten. */}
-        {template.backgroundImage && (
+        {/* Latar halaman (M5.3/M5.3.1): template, builtin, atau custom.
+            Layer terpisah di bawah konten: bukan block, tidak ikut pagination,
+            tidak menghalangi interaksi konten. */}
+        {backgroundUrl && (
           <div
             aria-hidden="true"
             className="a4-bg"
@@ -63,7 +72,7 @@ export function A4Page({ template, metadata, slices, pageNumber, zoom }: A4PageP
               inset: 0,
               zIndex: 0,
               pointerEvents: 'none',
-              backgroundImage: `url(${template.backgroundImage})`,
+              backgroundImage: `url(${backgroundUrl})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',

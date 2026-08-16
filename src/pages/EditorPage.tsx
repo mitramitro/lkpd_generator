@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AddBlockMenu } from '../components/editor/AddBlockMenu'
 import { AiGenerateQuestionsModal } from '../components/editor/AiGenerateQuestionsModal'
+import { BackgroundPanel } from '../components/editor/BackgroundPanel'
 import { BlockList } from '../components/editor/BlockList'
 import { ImportMateriModal } from '../components/editor/ImportMateriModal'
 import { ImportSoalModal } from '../components/editor/ImportSoalModal'
@@ -14,7 +15,7 @@ import { ArrowLeftIcon, BookIcon, FileTextIcon } from '../components/ui/icons'
 import { Panel } from '../components/ui/Panel'
 import { createImageGalleryBlock, createMaterialBlock } from '../lib/factories'
 import { formatDateTime, STORAGE_COPY } from '../lib/storageInfo'
-import type { Block, LKPDMetadata } from '../models/lkpd'
+import type { Block, CustomBackgroundMeta, LKPDMetadata, PageBackgroundConfig } from '../models/lkpd'
 import { useDocumentStore, type ImportMode } from '../store/documentStore'
 import { getTemplateById } from '../templates'
 
@@ -28,6 +29,9 @@ export function EditorPage() {
   const document = useDocumentStore((state) => state.documents.find((doc) => doc.id === id))
   const updateMetadata = useDocumentStore((state) => state.updateMetadata)
   const setTemplate = useDocumentStore((state) => state.setTemplate)
+  const setDocumentBackground = useDocumentStore((state) => state.setDocumentBackground)
+  const setPageBackground = useDocumentStore((state) => state.setPageBackground)
+  const addCustomBackground = useDocumentStore((state) => state.addCustomBackground)
   const addBlock = useDocumentStore((state) => state.addBlock)
   const insertBlockAfter = useDocumentStore((state) => state.insertBlockAfter)
   const replaceBlock = useDocumentStore((state) => state.replaceBlock)
@@ -73,6 +77,10 @@ export function EditorPage() {
 
   const handleMetadataChange = (metadata: LKPDMetadata) => updateMetadata(document.id, metadata)
   const handleTemplateChange = (templateId: string) => setTemplate(document.id, templateId)
+  const handleBackgroundDefault = (config?: PageBackgroundConfig) => setDocumentBackground(document.id, config)
+  const handleBackgroundPage = (pageNumber: number, config?: PageBackgroundConfig) =>
+    setPageBackground(document.id, pageNumber, config)
+  const handleAddCustomBackground = (meta: CustomBackgroundMeta) => addCustomBackground(document.id, meta)
   const handleAddBlock = (block: Block) => addBlock(document.id, block)
   const handleReplaceBlock = (block: Block) => replaceBlock(document.id, block)
   const handleRemoveBlock = (blockId: string) => removeBlock(document.id, blockId)
@@ -132,6 +140,15 @@ export function EditorPage() {
 
           <Panel title="Template Desain">
             <TemplatePicker value={document.templateId} onChange={handleTemplateChange} />
+          </Panel>
+
+          <Panel title="Background">
+            <BackgroundPanel
+              document={document}
+              onSetDefault={handleBackgroundDefault}
+              onSetPage={handleBackgroundPage}
+              onAddCustom={handleAddCustomBackground}
+            />
           </Panel>
 
           <Panel title="Penyimpanan & Backup">

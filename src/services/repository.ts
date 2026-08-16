@@ -1,5 +1,9 @@
 import type { LKPDDocument } from '../models/lkpd'
 
+// M5.3.1: jenis record gambar di object store images. 'image' = media di dalam
+// block (M4.5); 'background' = background custom yang diunggah (blob, bukan base64).
+export type StoredImageKind = 'image' | 'background'
+
 // Gambar yang disimpan terpisah dari dokumen (IndexedDB Blob), dirujuk dari
 // block via referensi "idb:<imageId>" pada field url/src.
 export interface StoredImage {
@@ -10,6 +14,9 @@ export interface StoredImage {
   filename: string
   width?: number
   height?: number
+  // 'background' untuk background custom; undefined/'image' = media block (backward compatible).
+  kind?: StoredImageKind
+  size?: number
   createdAt: string
   updatedAt: string
 }

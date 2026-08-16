@@ -1,3 +1,5 @@
+import type { TemplateContentArea } from './template'
+
 export interface LKPDMetadata {
   title: string
   subject: string
@@ -7,6 +9,39 @@ export interface LKPDMetadata {
   alokasiWaktu: string
   schoolName: string
   teacherName: string
+}
+
+// M5.3.1 — latar belakang halaman.
+// mode 'builtin' : memakai salah satu background bawaan (bg-1..bg-4), properti backgroundId.
+// mode 'custom'  : memakai gambar custom yang diunggah, properti imageId (referensi blob IndexedDB).
+// mode 'default' : tidak ada override — mengikuti default dokumen/template (dipakai pada UI
+//                  sebagai cara "menghapus" override halaman; TIDAK boleh disimpan).
+export type BackgroundMode = 'builtin' | 'custom'
+
+export interface PageBackgroundConfig {
+  mode: BackgroundMode
+  backgroundId?: string
+  imageId?: string
+  // Opsional: override safe area konten untuk halaman ini. Biasanya tidak diisi
+  // (dihitung otomatis: builtin dari template, custom memakai DEFAULT_CUSTOM_CONTENT_AREA).
+  contentArea?: TemplateContentArea
+}
+
+// Metadata satu background custom milik dokumen. Blob disimpan di IndexedDB
+// (object store images, kind='background'); field ini HANYA metadata + referensi.
+// dataUrl diisi sementara saat serialisasi backup/import dan selalu di-strip
+// sebelum dokumen disimpan di IndexedDB/localStorage.
+export interface CustomBackgroundMeta {
+  id: string
+  documentId: string
+  kind: 'background'
+  mimeType: string
+  filename: string
+  width: number
+  height: number
+  size: number
+  createdAt: string
+  dataUrl?: string
 }
 
 export interface HeadingBlock {
@@ -130,6 +165,17 @@ export interface LKPDDocument {
   updatedAt: string
   // M4.5: kapan terakhir kali dibuat backup .lkpd (metadata, bukan isi konten).
   lastBackupAt?: string
+  // M5.3.1 — background per halaman.
+  // background        : default background dokumen (opsional). Jika tidak ada,
+  //                      halaman mengikuti template (perilaku M1–M5.3).
+  // pageBackgrounds   : override per halaman, key = nomor halaman ('1'..'N').
+  //                      Halaman tanpa override memakai default dokumen/template.
+  // customBackgrounds : daftar metadata background custom milik dokumen ini.
+  //                      Blob asli disimpan di IndexedDB (object store images),
+  //                      direferensikan via imageId — TIDAK ada base64 di sini.
+  background?: PageBackgroundConfig
+  pageBackgrounds?: Record<string, PageBackgroundConfig>
+  customBackgrounds?: CustomBackgroundMeta[]
 }
 
 export const EMPTY_METADATA: LKPDMetadata = {

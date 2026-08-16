@@ -56,7 +56,22 @@ export async function exportDocumentWithImages(
       return block
     }),
   )
-  return JSON.stringify(createLkpdEnvelope({ ...document, blocks }), null, 2)
+
+  // M5.3.1 — background custom ikut di-embed (dataUrl sementara; di-strip lagi
+  // saat import oleh materializeDataUrls). Background bawaan tidak di-embed
+  // karena selalu tersedia di /public.
+  const customBackgrounds = document.customBackgrounds
+    ? await Promise.all(
+        document.customBackgrounds.map(async (meta) => {
+          if (meta.dataUrl) return meta
+          const blob = await resolveRef(meta.id)
+          if (!blob) throw new Error('Backup gagal: ada background yang tidak dapat dimuat.')
+          return { ...meta, dataUrl: await blobToDataUrl(blob) }
+        }),
+      )
+    : undefined
+
+  return JSON.stringify(createLkpdEnvelope({ ...document, blocks, ...(customBackgrounds ? { customBackgrounds } : {}) }), null, 2)
 }
 
 // Perkiraan ukuran file sebelum download (hanya helper informasi, tanpa

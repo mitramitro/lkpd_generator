@@ -64,7 +64,44 @@ type ImageSavingRepo = Pick<LKPDRepository, 'supportsBlobImages' | 'saveImage'>
 // TIDAK dimaterialisasi — dokumen tetap disimpan dengan data URL inline supaya
 // mode fallback tetap bisa menyimpan dokumen berisi gambar.
 export async function materializeDataUrls(document: LKPDDocument, repo: ImageSavingRepo): Promise<LKPDDocument> {
-  if (!repo.supportsBlobImages) return document
+  let result = document
+
+  // M5.3.1 — background custom hasil import: blob di-save ke IndexedDB
+  // (kind='background'), dataUrl di-strip agar tidak ada base64 di dokumen.
+  if (result.customBackgrounds && result.customBackgrounds.some((meta) => !!meta.dataUrl)) {
+    if (repo.supportsBlobImages) {
+      const now = new Date().toISOString()
+      const customBackgrounds = await Promise.all(
+        result.customBackgrounds.map(async (meta) => {
+          if (!meta.dataUrl) return meta
+          const record: StoredImage = {
+            id: meta.id,
+            documentId: result.id,
+            blob: dataUrlToBlob(meta.dataUrl),
+            mimeType: meta.mimeType,
+            filename: meta.filename,
+            width: meta.width,
+            height: meta.height,
+            size: meta.size,
+            kind: 'background',
+            createdAt: meta.createdAt,
+            updatedAt: now,
+          }
+          await repo.saveImage(record)
+          const { dataUrl: _dataUrl, ...rest } = meta
+          return rest
+        }),
+      )
+      result = { ...result, customBackgrounds }
+    } else {
+      // Mode fallback (localStorage): jangan simpan base64 besar — strip dataUrl,
+      // metadata dipertahankan. Referensi blob hilang => resolusi jatuh ke default.
+      const customBackgrounds = result.customBackgrounds.map(({ dataUrl: _dataUrl, ...rest }) => rest)
+      result = { ...result, customBackgrounds }
+    }
+  }
+
+  if (!repo.supportsBlobImages) return result
 
   let changed = false
 
@@ -121,5 +158,5 @@ export async function materializeDataUrls(document: LKPDDocument, repo: ImageSav
     }),
   )
 
-  return changed ? { ...document, blocks } : document
+  return changed ? { ...result, blocks } : result
 }

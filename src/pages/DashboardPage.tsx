@@ -6,6 +6,7 @@ import { Modal } from '../components/ui/Modal'
 import { ArchiveIcon, ArrowLeftIcon, DownloadIcon, FileTextIcon, PlusIcon, TrashIcon } from '../components/ui/icons'
 import { formatDate } from '../lib/format'
 import { paginateBlocks } from '../lib/pagination'
+import { paginationContentArea } from '../lib/backgrounds'
 import { createSampleDocument } from '../lib/seed'
 import { formatBytes, getStorageEstimate, STORAGE_LIMIT_COPY, type StorageEstimate } from '../lib/storageInfo'
 import { BackupError, downloadBackupAll } from '../services/backupService'
@@ -140,7 +141,7 @@ export function DashboardPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {documents.map((document) => {
             const template = getTemplateById(document.templateId)
-            const pageCount = paginateBlocks(document.blocks, template).length
+            const pageCount = paginateBlocks(document.blocks, template, paginationContentArea(document, template)).length
             return (
               <div key={document.id} className="flex flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="mb-3 flex items-start justify-between gap-2">

@@ -1,5 +1,6 @@
 import type {
   Block,
+  CustomBackgroundMeta,
   GalleryColumnPreset,
   GalleryGap,
   GalleryImage,
@@ -10,7 +11,9 @@ import type {
   ImageWidth,
   LKPDDocument,
   LKPDMetadata,
+  PageBackgroundConfig,
 } from '../models/lkpd'
+import type { TemplateContentArea } from '../models/template'
 import { DEFAULT_TEMPLATE_ID, TEMPLATES } from '../templates'
 import { newId } from './id'
 import { resolveImagePlacement } from './imagePlacement'
@@ -132,6 +135,77 @@ function normalizeBlocks(rawBlocks: unknown[]): Block[] {
   })
 }
 
+// M5.3.1 — normalisasi background halaman.
+function normalizeContentArea(value: unknown): TemplateContentArea | undefined {
+  const record = isRecord(value) ? value : {}
+  const top = coerceNumber(record.top)
+  const right = coerceNumber(record.right)
+  const bottom = coerceNumber(record.bottom)
+  const left = coerceNumber(record.left)
+  if (top === undefined || right === undefined || bottom === undefined || left === undefined) return undefined
+  if (top < 0 || right < 0 || bottom < 0 || left < 0) return undefined
+  return { top, right, bottom, left }
+}
+
+function normalizePageBackground(raw: unknown): PageBackgroundConfig | undefined {
+  const record = isRecord(raw) ? raw : {}
+  const mode = record.mode
+  if (mode === 'builtin') {
+    const backgroundId = coerceString(record.backgroundId)
+    if (!backgroundId) return undefined
+    const config: PageBackgroundConfig = { mode: 'builtin', backgroundId }
+    const area = normalizeContentArea(record.contentArea)
+    if (area) config.contentArea = area
+    return config
+  }
+  if (mode === 'custom') {
+    const imageId = coerceString(record.imageId)
+    if (!imageId) return undefined
+    const config: PageBackgroundConfig = { mode: 'custom', imageId }
+    const area = normalizeContentArea(record.contentArea)
+    if (area) config.contentArea = area
+    return config
+  }
+  return undefined
+}
+
+interface NormalizedCustomBackgrounds {
+  list: CustomBackgroundMeta[]
+  idMap: Map<string, string>
+}
+
+// Semua ID background custom SELALU digenerate ulang saat import (newId) —
+// deterministik, bebas konflik dengan dokumen lain, dan referensi (imageId di
+// background/pageBackgrounds) di-remap lewat idMap.
+function normalizeCustomBackgrounds(raw: unknown, now: string): NormalizedCustomBackgrounds | undefined {
+  if (!Array.isArray(raw)) return undefined
+  const list: CustomBackgroundMeta[] = []
+  const idMap = new Map<string, string>()
+  for (const item of raw) {
+    const record = isRecord(item) ? item : {}
+    const oldId = coerceString(record.id)
+    if (!oldId) continue
+    if (record.kind !== 'background') continue
+    const newIdValue = newId()
+    idMap.set(oldId, newIdValue)
+    const meta: CustomBackgroundMeta = {
+      id: newIdValue,
+      documentId: '', // diisi setelah id dokumen diketahui
+      kind: 'background',
+      mimeType: coerceString(record.mimeType),
+      filename: coerceString(record.filename),
+      width: coerceNumber(record.width) ?? 0,
+      height: coerceNumber(record.height) ?? 0,
+      size: coerceNumber(record.size) ?? 0,
+      createdAt: typeof record.createdAt === 'string' ? record.createdAt : now,
+    }
+    if (typeof record.dataUrl === 'string' && record.dataUrl.startsWith('data:')) meta.dataUrl = record.dataUrl
+    list.push(meta)
+  }
+  if (list.length === 0) return undefined
+  return { list, idMap }
+}
+
 // Menghasilkan dokumen baru yang ternormalisasi dari data .lkpd.
 // - ID baru dihasilkan hanya jika ID wajib hilang atau bentrok dengan dokumen
 //   existing (mencegah overwrite diam-diam). Relationship (questionId, dll)
@@ -162,6 +236,29 @@ export function normalizeImportedDocument(rawDocument: unknown, existingIds: str
       ? record.templateId
       : DEFAULT_TEMPLATE_ID
 
+  // M5.3.1 — background halaman. ID custom di-remap ke ID baru yang bebas konflik.
+  const backgrounds = normalizeCustomBackgrounds(record.customBackgrounds, now)
+  const idMap = backgrounds?.idMap ?? new Map<string, string>()
+  const remapImageId = (config: PageBackgroundConfig | undefined): PageBackgroundConfig | undefined => {
+    if (!config || config.mode !== 'custom' || !config.imageId || !idMap.has(config.imageId)) return config
+    return { ...config, imageId: idMap.get(config.imageId) as string }
+  }
+  const background = remapImageId(normalizePageBackground(record.background))
+
+  let pageBackgrounds: Record<string, PageBackgroundConfig> | undefined
+  if (isRecord(record.pageBackgrounds)) {
+    const normalized: Record<string, PageBackgroundConfig> = {}
+    for (const [key, value] of Object.entries(record.pageBackgrounds)) {
+      const pageNumber = Number(key)
+      if (!Number.isInteger(pageNumber) || pageNumber < 1) continue
+      const config = remapImageId(normalizePageBackground(value))
+      if (config) normalized[key] = config
+    }
+    if (Object.keys(normalized).length > 0) pageBackgrounds = normalized
+  }
+
+  const customBackgrounds = backgrounds?.list.map((meta) => ({ ...meta, documentId: id }))
+
   return {
     id,
     metadata,
@@ -169,5 +266,8 @@ export function normalizeImportedDocument(rawDocument: unknown, existingIds: str
     blocks: Array.isArray(record.blocks) ? normalizeBlocks(record.blocks) : [],
     createdAt: typeof record.createdAt === 'string' ? record.createdAt : now,
     updatedAt: typeof record.updatedAt === 'string' ? record.updatedAt : now,
+    ...(background ? { background } : {}),
+    ...(pageBackgrounds ? { pageBackgrounds } : {}),
+    ...(customBackgrounds ? { customBackgrounds } : {}),
   }
 }

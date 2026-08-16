@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { LKPDDocument } from '../../models/lkpd'
 import { pxPerMm } from '../../lib/measure'
 import { expandUnitToSlices, groupBlocks, paginateSlices, sliceKey } from '../../lib/pagination'
-import { contentWidthMm as templateContentWidthMm } from '../../lib/template'
+import { contentWidthMmFor } from '../../lib/template'
+import { paginationContentArea, resolvePageBackground } from '../../lib/backgrounds'
 import { getTemplateById } from '../../templates'
 import { downloadBackup } from '../../services/backupService'
 import { useDocumentStore } from '../../store/documentStore'
@@ -97,16 +98,20 @@ export function A4Preview({ document }: { document: LKPDDocument }) {
   // Pagination dihitung ulang setiap kali ukuran berubah (derived state,
   // bukan disimpan permanen). Heights fallback ke estimasi saat pengukuran belum siap.
   const units = useMemo(() => groupBlocks(document.blocks), [document.blocks])
-  // Lebar konten selalu mengikuti safe area template (contentArea ?? margins)
-  // sehingga pengukuran DOM, render, dan pagination memakai lebar yang identik.
-  const contentWidthMm = templateContentWidthMm(template)
+
+  // M5.3.1 — area efektif: area TERKETAT (max tiap sisi) di antara template,
+  // default dokumen, dan semua override halaman. Pengukuran DOM, render, dan
+  // pagination memakai area identik sehingga jumlah halaman konsisten dan
+  // konten tidak pernah tertutup background halaman mana pun.
+  const effectiveArea = useMemo(() => paginationContentArea(document, template), [document, template])
+  const contentWidthMm = contentWidthMmFor(template.pageWidth, effectiveArea)
   const slices = useMemo(
     () => units.flatMap((unit) => expandUnitToSlices(unit, contentWidthMm)),
     [units, contentWidthMm],
   )
   const pages = useMemo(
-    () => paginateSlices(slices, template, { get: (id) => heights[id] }, headerMm, footerMm),
-    [slices, template, heights, headerMm, footerMm],
+    () => paginateSlices(slices, template, { get: (id) => heights[id] }, headerMm, footerMm, undefined, effectiveArea),
+    [slices, template, heights, headerMm, footerMm, effectiveArea],
   )
 
   const zoomOut = () => setZoom((current) => Math.max(MIN_ZOOM, Math.round((current - ZOOM_STEP) * 10) / 10))
@@ -188,6 +193,7 @@ export function A4Preview({ document }: { document: LKPDDocument }) {
               slices={pageSlices}
               pageNumber={index + 1}
               zoom={effectiveZoom}
+              pageBackground={resolvePageBackground(document, template, index + 1)}
             />
           ))}
           {pages.length === 0 && (

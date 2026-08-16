@@ -1,5 +1,5 @@
 import type { LKPDDocument } from '../models/lkpd'
-import type { LKPDTemplate, TemplateMargins } from '../models/template'
+import type { LKPDTemplate, TemplateContentArea, TemplateMargins } from '../models/template'
 
 // Satu-satunya cara mengganti template dokumen. HANYA mengubah templateId
 // (dan updatedAt). Semua konten — blocks, question IDs, image IDs, gallery,
@@ -11,15 +11,31 @@ export function applyTemplate(document: LKPDDocument, templateId: string, now = 
 // Area konten efektif sebuah template. Template dengan backgroundImage memakai
 // contentArea sendiri (safe area desain); template lama tanpa background tetap
 // memakai margins (perilaku M1–M4 tidak berubah).
-export function contentAreaOf(template: LKPDTemplate): TemplateMargins {
+export function contentAreaOf(template: Pick<LKPDTemplate, 'contentArea' | 'margins'>): TemplateMargins {
   return template.contentArea ?? template.margins
+}
+
+// Versi generic (M5.3.1): menghitung lebar/tinggi konten dari area tertentu
+// (mm), bukan dari template. Dipakai oleh pagination & render saat area konten
+// ditimpa background halaman (area efektif = area terketat di semua halaman).
+export function contentWidthMmFor(pageWidth: number, area: TemplateContentArea): number {
+  return pageWidth - area.left - area.right
+}
+
+export function usableContentHeightMmFor(
+  pageHeight: number,
+  area: TemplateContentArea,
+  headerMm: number,
+  footerMm: number,
+  contentPadMm: number,
+): number {
+  return pageHeight - area.top - area.bottom - headerMm - footerMm - contentPadMm
 }
 
 // Lebar konten yang tersedia di dalam safe area (mm). Satu-satunya sumber
 // kebenaran lebar — dipakai oleh pagination, measurement DOM, dan render.
 export function contentWidthMm(template: LKPDTemplate): number {
-  const area = contentAreaOf(template)
-  return template.pageWidth - area.left - area.right
+  return contentWidthMmFor(template.pageWidth, contentAreaOf(template))
 }
 
 // Tinggi konten yang tersedia di dalam safe area setelah dikurangi header,
@@ -31,6 +47,5 @@ export function usableContentHeightMm(
   footerMm: number,
   contentPadMm: number,
 ): number {
-  const area = contentAreaOf(template)
-  return template.pageHeight - area.top - area.bottom - headerMm - footerMm - contentPadMm
+  return usableContentHeightMmFor(template.pageHeight, contentAreaOf(template), headerMm, footerMm, contentPadMm)
 }

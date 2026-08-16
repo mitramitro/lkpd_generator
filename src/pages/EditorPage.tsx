@@ -171,6 +171,25 @@ export function EditorPage() {
               <Button className="w-full" onClick={() => setAiOpen(true)}>
                 ✨ Buat Soal dengan AI
               </Button>
+
+              {/* Toolbar aksi editor — sticky terhadap scroll container sidebar,
+                  selalu terlihat saat scroll melewati banyak block. */}
+              <div className="no-print sticky top-0 z-20 rounded-lg border border-slate-200 bg-white px-2.5 py-2 shadow-md">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <div className="col-span-2 sm:col-span-1">
+                    <AddBlockMenu onAdd={handleAddBlock} size="sm" />
+                  </div>
+                  <Button variant="secondary" size="sm" onClick={() => setImportOpen(true)}>
+                    <FileTextIcon />
+                    Import Soal
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setImportMateriOpen(true)}>
+                    <BookIcon />
+                    Import Materi
+                  </Button>
+                </div>
+              </div>
+
               <BlockList
                 blocks={document.blocks}
                 documentId={document.id}
@@ -180,17 +199,6 @@ export function EditorPage() {
                 onMove={handleMoveBlock}
                 onAddGallery={handleAddGallery}
               />
-              <div className="grid grid-cols-1 gap-2">
-                <AddBlockMenu onAdd={handleAddBlock} />
-                <Button variant="secondary" onClick={() => setImportOpen(true)}>
-                  <FileTextIcon />
-                  Import Soal
-                </Button>
-                <Button variant="secondary" onClick={() => setImportMateriOpen(true)}>
-                  <BookIcon />
-                  Import Materi
-                </Button>
-              </div>
             </div>
           </Panel>
         </div>

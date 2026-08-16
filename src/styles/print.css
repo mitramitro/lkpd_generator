@@ -81,6 +81,12 @@
     -webkit-print-color-adjust: exact;
   }
 
+  /* Latar dekoratif template (M5.3): tetap penuh halaman dan ikut tercetak. */
+  .a4-bg {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
   /* Judul/heading tidak ditinggalkan sendirian di akhir halaman. */
   .a4-page h1,
   .a4-page h2,

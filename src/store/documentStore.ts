@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Block, LKPDDocument, LKPDMetadata } from '../models/lkpd'
 import { createEmptyDocument, renumberQuestions } from '../lib/factories'
+import { applyTemplate } from '../lib/template'
 import { imageIdFromReference, isImageReference, materializeDataUrls } from '../lib/imageStorage'
 import { storageFailureMessage } from '../lib/storageInfo'
 import { getRepository } from '../services/repositoryProvider'
@@ -141,7 +142,7 @@ export const useDocumentStore = create<DocumentStore>((set) => ({
     set((state) => ({
       documents: state.documents.map((document) => {
         if (document.id !== id) return document
-        const next = touch({ ...document, templateId })
+        const next = applyTemplate(document, templateId)
         schedulePersist(id)
         return next
       }),

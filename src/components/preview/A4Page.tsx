@@ -15,6 +15,9 @@ interface A4PageProps {
 
 export function A4Page({ template, metadata, slices, pageNumber, zoom }: A4PageProps) {
   const contentWidthMm = template.pageWidth - template.margins.left - template.margins.right
+  // Template bergambar memakai contentArea sebagai padding halaman; template
+  // tanpa backgroundImage tetap memakai margins (perilaku lama tidak berubah).
+  const pagePad = template.contentArea ?? template.margins
 
   // Galeri dianggap lanjutan bila baris pertamanya memulai halaman ini dan
   // bagian soal-nya (teks/opsi) ada di halaman lain — atau galeri lepas.
@@ -32,13 +35,14 @@ export function A4Page({ template, metadata, slices, pageNumber, zoom }: A4PageP
       <div
         className="a4-page"
         style={{
+          position: 'relative',
           width: `${template.pageWidth}mm`,
           height: `${template.pageHeight}mm`,
           boxSizing: 'border-box',
           background: template.colors.background,
           color: template.colors.text,
           fontFamily: template.typography.fontFamily,
-          padding: `${template.margins.top}mm ${template.margins.right}mm ${template.margins.bottom}mm ${template.margins.left}mm`,
+          padding: `${pagePad.top}mm ${pagePad.right}mm ${pagePad.bottom}mm ${pagePad.left}mm`,
           transform: `scale(${zoom})`,
           transformOrigin: 'top left',
           boxShadow: '0 4px 20px rgba(15, 23, 42, 0.15)',
@@ -46,22 +50,44 @@ export function A4Page({ template, metadata, slices, pageNumber, zoom }: A4PageP
           flexDirection: 'column',
         }}
       >
-        <PageHeader template={template} metadata={metadata} />
-        <div style={{ flex: 1, padding: '3mm 0', display: 'flex', flexDirection: 'column' }}>
-          {slices.map((slice, index) => {
-            const continuation = slice.type === 'gallery_row' && index === 0 && !questionIdsOnPage.has(slice.gallery.questionId)
-            return (
-              <SliceView
-                key={sliceKey(slice)}
-                slice={slice}
-                template={template}
-                contentWidthMm={contentWidthMm}
-                continuation={continuation}
-              />
-            )
-          })}
+        {/* Latar dekoratif halaman (M5.3). Layer terpisah di bawah konten:
+            tidak menjadi block, tidak ikut pagination, tidak menghalangi
+            interaksi konten. */}
+        {template.backgroundImage && (
+          <div
+            aria-hidden="true"
+            className="a4-bg"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 0,
+              pointerEvents: 'none',
+              backgroundImage: `url(${template.backgroundImage})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+            }}
+          />
+        )}
+
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+          <PageHeader template={template} metadata={metadata} />
+          <div style={{ flex: 1, padding: '3mm 0', display: 'flex', flexDirection: 'column' }}>
+            {slices.map((slice, index) => {
+              const continuation = slice.type === 'gallery_row' && index === 0 && !questionIdsOnPage.has(slice.gallery.questionId)
+              return (
+                <SliceView
+                  key={sliceKey(slice)}
+                  slice={slice}
+                  template={template}
+                  contentWidthMm={contentWidthMm}
+                  continuation={continuation}
+                />
+              )
+            })}
+          </div>
+          <PageFooter template={template} metadata={metadata} pageNumber={pageNumber} />
         </div>
-        <PageFooter template={template} metadata={metadata} pageNumber={pageNumber} />
       </div>
     </div>
   )

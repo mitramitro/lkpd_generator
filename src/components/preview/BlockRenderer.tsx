@@ -56,6 +56,8 @@ function HeadingView({ block, template }: { block: HeadingBlock; template: LKPDT
         margin: isLevelOne ? '3mm 0 2.5mm' : '2.5mm 0 2mm',
         paddingLeft: isLevelOne ? '3mm' : 0,
         borderLeft: isLevelOne ? `1.5mm solid ${colors.primary}` : 'none',
+        overflowWrap: 'break-word',
+        minWidth: 0,
       }}
     >
       {block.text || '\u00A0'}
@@ -73,6 +75,7 @@ function TextView({ block, template }: { block: TextBlock; template: LKPDTemplat
         color: template.colors.text,
         margin: '0 0 3mm',
         whiteSpace: 'pre-line',
+        overflowWrap: 'break-word',
       }}
     >
       {block.text || '\u00A0'}
@@ -121,19 +124,20 @@ function QuestionView({ block, template }: { block: QuestionBlock; template: LKP
       <div
         style={{
           flex: 1,
+          minWidth: 0,
           fontSize: `${typography.questionFontSize}pt`,
           lineHeight: typography.lineHeight,
           color: colors.text,
         }}
       >
-        <p style={{ margin: 0 }}>{block.text || '\u00A0'}</p>
+        <p style={{ margin: 0, overflowWrap: 'break-word' }}>{block.text || '\u00A0'}</p>
 
         {block.questionType === 'multiple_choice' && (
           <div style={{ marginTop: '2mm', display: 'flex', flexDirection: 'column', gap: '1.5mm' }}>
             {block.options.map((option, index) => (
-              <div key={index} style={{ display: 'flex', gap: '2mm' }}>
-                <span style={{ fontWeight: 600, color: colors.secondary }}>{optionLetter(index)}.</span>
-                <span style={{ flex: 1 }}>{option || '\u00A0'}</span>
+              <div key={index} style={{ display: 'flex', gap: '2mm', minWidth: 0 }}>
+                <span style={{ fontWeight: 600, color: colors.secondary, flexShrink: 0 }}>{optionLetter(index)}.</span>
+                <span style={{ flex: 1, minWidth: 0, overflowWrap: 'break-word' }}>{option || '\u00A0'}</span>
               </div>
             ))}
           </div>
@@ -170,6 +174,7 @@ function MaterialView({ block, template }: { block: MaterialBlock; template: LKP
             borderLeft: `1.5mm solid ${colors.primary}`,
             paddingLeft: '3mm',
             margin: '0 0 2mm',
+            overflowWrap: 'break-word',
           }}
         >
           {block.title}
@@ -183,6 +188,7 @@ function MaterialView({ block, template }: { block: MaterialBlock; template: LKP
           color: colors.text,
           margin: 0,
           whiteSpace: 'pre-wrap',
+          overflowWrap: 'break-word',
         }}
       >
         {block.content || '\u00A0'}
@@ -293,6 +299,7 @@ function ImageView({ block, template }: { block: ImageBlock; template: LKPDTempl
             fontSize: `${template.typography.bodyFontSize - 2}pt`,
             color: colors.muted,
             fontStyle: 'italic',
+            overflowWrap: 'break-word',
           }}
         >
           {block.caption}

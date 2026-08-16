@@ -26,6 +26,7 @@ export function MaterialParagraphView({ material, paragraph, showTitle, template
             borderLeft: `1.5mm solid ${colors.primary}`,
             paddingLeft: '3mm',
             margin: '0 0 2mm',
+            overflowWrap: 'break-word',
           }}
         >
           {material.title}
@@ -39,6 +40,7 @@ export function MaterialParagraphView({ material, paragraph, showTitle, template
           color: colors.text,
           margin: 0,
           whiteSpace: 'pre-wrap',
+          overflowWrap: 'break-word',
         }}
       >
         {paragraph || '\u00A0'}

@@ -56,7 +56,7 @@ function GalleryImageCell({ image, template }: GalleryImageCellProps) {
       )}
       {image.caption && (
         <figcaption
-          style={{ marginTop: '1mm', fontSize: '8pt', color: colors.muted, fontStyle: 'italic' }}
+          style={{ marginTop: '1mm', fontSize: '8pt', color: colors.muted, fontStyle: 'italic', overflowWrap: 'break-word' }}
         >
           {image.caption}
         </figcaption>

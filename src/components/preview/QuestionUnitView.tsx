@@ -114,6 +114,7 @@ function QuestionImage({ block, template, widthPercent, centered = false, inline
         fontSize: `${template.typography.bodyFontSize - 2}pt`,
         color: colors.muted,
         fontStyle: 'italic',
+        overflowWrap: 'break-word',
       }}
     >
       {block.caption}
@@ -186,9 +187,9 @@ function QuestionChoices({ question, template }: { question: QuestionBlock; temp
     return (
       <div style={{ marginTop: '2mm', display: 'flex', flexDirection: 'column', gap: '1.5mm' }}>
         {question.options.map((option, index) => (
-          <div key={index} style={{ display: 'flex', gap: '2mm' }}>
-            <span style={{ fontWeight: 600, color: colors.secondary }}>{optionLetter(index)}.</span>
-            <span style={{ flex: 1 }}>{option || '\u00A0'}</span>
+          <div key={index} style={{ display: 'flex', gap: '2mm', minWidth: 0 }}>
+            <span style={{ fontWeight: 600, color: colors.secondary, flexShrink: 0 }}>{optionLetter(index)}.</span>
+            <span style={{ flex: 1, minWidth: 0, overflowWrap: 'break-word' }}>{option || '\u00A0'}</span>
           </div>
         ))}
       </div>
@@ -205,7 +206,7 @@ function QuestionChoices({ question, template }: { question: QuestionBlock; temp
 }
 
 function QuestionTextContent({ question }: { question: QuestionBlock }) {
-  return <p style={{ margin: 0 }}>{question.text || '\u00A0'}</p>
+  return <p style={{ margin: 0, overflowWrap: 'break-word' }}>{question.text || '\u00A0'}</p>
 }
 
 interface QuestionPartProps {

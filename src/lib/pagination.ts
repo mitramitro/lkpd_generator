@@ -2,6 +2,7 @@ import type { Block, ImageBlock, ImageGalleryBlock, MaterialBlock, QuestionBlock
 import type { LKPDTemplate } from '../models/template'
 import { resolveGalleryColumns, resolveGalleryPlacement, splitImagesIntoRows, type GalleryRow } from './gallery'
 import { imageFlowWidthPercent } from './imagePlacement'
+import { contentWidthMm, usableContentHeightMm } from './template'
 
 const HEADER_SPACE_MM = 14
 const FOOTER_SPACE_MM = 12
@@ -403,17 +404,17 @@ export function paginateSlices(
   footerMm: number,
   contentPadMm = CONTENT_PAD_MM,
 ): PageSlice[][] {
-  const usableHeight =
-    template.pageHeight - template.margins.top - template.margins.bottom - headerMm - footerMm - contentPadMm
-  const contentWidth = template.pageWidth - template.margins.left - template.margins.right
+  const usableHeight = usableContentHeightMm(template, headerMm, footerMm, contentPadMm)
+  const contentWidth = contentWidthMm(template)
   return buildPages(slices, template, usableHeight, contentWidth, (id) => heights.get(id))
 }
 
 // Estimasi halaman (dipakai Dashboard) berbasis estimasi tinggi, tanpa DOM.
+// Menggunakan HEADER/FOOTER/CONTENT_PAD yang sama dengan default paginateSlices
+// dan lebar dari contentArea sehingga jumlah halaman preview == print == dashboard.
 export function paginateBlocks(blocks: Block[], template: LKPDTemplate): PageSlice[][] {
-  const usableHeight =
-    template.pageHeight - template.margins.top - template.margins.bottom - HEADER_SPACE_MM - FOOTER_SPACE_MM
-  const contentWidth = template.pageWidth - template.margins.left - template.margins.right
+  const usableHeight = usableContentHeightMm(template, HEADER_SPACE_MM, FOOTER_SPACE_MM, CONTENT_PAD_MM)
+  const contentWidth = contentWidthMm(template)
   const units = groupBlocks(blocks)
   const slices = units.flatMap((unit) => expandUnitToSlices(unit, contentWidth))
   return buildPages(slices, template, usableHeight, contentWidth, () => undefined)

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { LKPDDocument } from '../../models/lkpd'
 import { pxPerMm } from '../../lib/measure'
 import { expandUnitToSlices, groupBlocks, paginateSlices, sliceKey } from '../../lib/pagination'
+import { contentWidthMm as templateContentWidthMm } from '../../lib/template'
 import { getTemplateById } from '../../templates'
 import { downloadBackup } from '../../services/backupService'
 import { useDocumentStore } from '../../store/documentStore'
@@ -96,7 +97,9 @@ export function A4Preview({ document }: { document: LKPDDocument }) {
   // Pagination dihitung ulang setiap kali ukuran berubah (derived state,
   // bukan disimpan permanen). Heights fallback ke estimasi saat pengukuran belum siap.
   const units = useMemo(() => groupBlocks(document.blocks), [document.blocks])
-  const contentWidthMm = template.pageWidth - template.margins.left - template.margins.right
+  // Lebar konten selalu mengikuti safe area template (contentArea ?? margins)
+  // sehingga pengukuran DOM, render, dan pagination memakai lebar yang identik.
+  const contentWidthMm = templateContentWidthMm(template)
   const slices = useMemo(
     () => units.flatMap((unit) => expandUnitToSlices(unit, contentWidthMm)),
     [units, contentWidthMm],

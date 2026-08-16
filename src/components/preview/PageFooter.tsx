@@ -25,8 +25,10 @@ export function PageFooter({ template, metadata, pageNumber }: PageFooterProps) 
         color: footer.textColor,
       }}
     >
-      <span>{metadata.teacherName ? `Guru: ${metadata.teacherName}` : ''}</span>
-      {footer.showPageNumber ? <span>Halaman {pageNumber}</span> : <span />}
+      <span style={{ minWidth: 0, overflowWrap: 'break-word' }}>
+        {metadata.teacherName ? `Guru: ${metadata.teacherName}` : ''}
+      </span>
+      {footer.showPageNumber ? <span style={{ flexShrink: 0 }}>Halaman {pageNumber}</span> : <span />}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import type { LKPDMetadata } from '../../models/lkpd'
 import type { LKPDTemplate } from '../../models/template'
 import { sliceKey, type PageSlice } from '../../lib/pagination'
+import { contentAreaOf, contentWidthMm as templateContentWidthMm } from '../../lib/template'
 import { SliceView } from './UnitView'
 import { PageFooter } from './PageFooter'
 import { PageHeader } from './PageHeader'
@@ -14,10 +15,10 @@ interface A4PageProps {
 }
 
 export function A4Page({ template, metadata, slices, pageNumber, zoom }: A4PageProps) {
-  const contentWidthMm = template.pageWidth - template.margins.left - template.margins.right
-  // Template bergambar memakai contentArea sebagai padding halaman; template
-  // tanpa backgroundImage tetap memakai margins (perilaku lama tidak berubah).
-  const pagePad = template.contentArea ?? template.margins
+  // Lebar konten dan padding halaman selalu mengikuti safe area template
+  // (contentArea untuk template bergambar, margins untuk template lama).
+  const contentWidthMm = templateContentWidthMm(template)
+  const pagePad = contentAreaOf(template)
 
   // Galeri dianggap lanjutan bila baris pertamanya memulai halaman ini dan
   // bagian soal-nya (teks/opsi) ada di halaman lain — atau galeri lepas.

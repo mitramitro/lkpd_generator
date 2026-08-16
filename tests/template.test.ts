@@ -4,9 +4,12 @@ import { strict as assert } from 'node:assert'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import type { Block, ImageBlock, LKPDDocument } from '../src/models/lkpd'
-import { applyTemplate } from '../src/lib/template'
+import type { TemplateContentArea } from '../src/models/template'
+import { applyTemplate, contentAreaOf, contentWidthMm, usableContentHeightMm } from '../src/lib/template'
 import { createEmptyDocument, createEssayQuestion, createMaterialBlock, createMultipleChoiceQuestion } from '../src/lib/factories'
 import { normalizeImportedDocument } from '../src/lib/lkpdMigration'
+import { paginateBlocks } from '../src/lib/pagination'
+import { A4 } from '../src/templates/base'
 import { DEFAULT_TEMPLATE_ID, getTemplateById, TEMPLATES } from '../src/templates'
 
 const tests: { name: string; fn: () => void }[] = []
@@ -165,6 +168,81 @@ test('10. import .lkpd dengan templateId baru tetap dikenali', () => {
 test('11. import .lkpd dengan templateId tidak dikenal fallback default', () => {
   const imported = normalizeImportedDocument({ templateId: 'bukan-template', blocks: [] }, [])
   assert.equal(imported.templateId, DEFAULT_TEMPLATE_ID)
+})
+
+// ---- M5.3 Polish: contentArea sebagai safe area per background ----
+
+test('12. contentArea per background sesuai safe area desain', () => {
+  const expected: Record<string, TemplateContentArea> = {
+    'bg-1': { top: 25, right: 25, bottom: 24, left: 25 },
+    'bg-2': { top: 19, right: 21, bottom: 18, left: 20 },
+    'bg-3': { top: 18, right: 18, bottom: 16, left: 18 },
+    'bg-4': { top: 24, right: 24, bottom: 22, left: 24 },
+  }
+  for (const [id, area] of Object.entries(expected)) {
+    assert.deepEqual(getTemplateById(id).contentArea, area, `${id} contentArea`)
+  }
+})
+
+test('13. contentWidthMm memakai contentArea untuk background dan margins untuk template lama', () => {
+  const minimal = getTemplateById('minimal')
+  assert.equal(contentWidthMm(minimal), minimal.pageWidth - minimal.margins.left - minimal.margins.right)
+  for (const id of BACKGROUND_IDS) {
+    const template = getTemplateById(id)
+    const area = contentAreaOf(template)
+    const width = contentWidthMm(template)
+    assert.equal(width, template.pageWidth - area.left - area.right)
+    assert.ok(width > 0 && width < template.pageWidth, `${id}: lebar konten ${width}mm di dalam halaman`)
+    assert.ok(area.left > 0 && area.right > 0 && area.top > 0 && area.bottom > 0, `${id}: semua sisi positif`)
+  }
+})
+
+test('14. bg-1 dan bg-4 (berbingkai) inset lebih besar dari margin A4 agar konten di dalam bingkai', () => {
+  for (const id of ['bg-1', 'bg-4'] as const) {
+    const area = contentAreaOf(getTemplateById(id))
+    assert.ok(area.top > A4.margins.top, `${id}: top ${area.top} > ${A4.margins.top}`)
+    assert.ok(area.right > A4.margins.right, `${id}: right ${area.right} > ${A4.margins.right}`)
+    assert.ok(area.bottom > A4.margins.bottom, `${id}: bottom ${area.bottom} > ${A4.margins.bottom}`)
+    assert.ok(area.left > A4.margins.left, `${id}: left ${area.left} > ${A4.margins.left}`)
+  }
+})
+
+test('15. pagination memakai contentArea sehingga preview == print == dashboard', () => {
+  const bg1 = getTemplateById('bg-1')
+  const minimal = getTemplateById('minimal')
+
+  assert.equal(
+    usableContentHeightMm(bg1, 14, 12, 6),
+    297 - bg1.contentArea!.top - bg1.contentArea!.bottom - 14 - 12 - 6,
+    'tinggi konten bg-1 dari contentArea',
+  )
+  assert.ok(contentWidthMm(bg1) < contentWidthMm(minimal), 'bg-1 lebih sempit dari template tanpa background')
+  assert.ok(usableContentHeightMm(bg1, 14, 12, 6) < usableContentHeightMm(minimal, 14, 12, 6), 'bg-1 lebih pendek')
+
+  const document = createEmptyDocument(
+    {
+      title: 'Tes Pagination',
+      subject: 'Matematika',
+      classLevel: 'X',
+      major: '',
+      semester: 'Ganjil',
+      alokasiWaktu: '2 JP',
+      schoolName: 'SMA Negeri 1 Contoh',
+      teacherName: 'Guru Matematika',
+    },
+    'bg-1',
+  )
+  document.blocks = [
+    createMaterialBlock('Materi', 'A'.repeat(120)),
+    createMultipleChoiceQuestion(),
+    createEssayQuestion(),
+  ]
+  const pages = paginateBlocks(document.blocks, bg1)
+  assert.ok(Array.isArray(pages), 'paginateBlocks mengembalikan array halaman')
+  assert.ok(pages.length >= 1, 'minimal satu halaman')
+  for (const page of pages) {
+    assert.ok(page.length > 0, 'setiap halaman punya slice')
+  }
 })
 
 let passed = 0

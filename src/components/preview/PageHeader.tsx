@@ -16,6 +16,7 @@ export function PageHeader({ template, metadata }: { template: LKPDTemplate; met
           fontWeight: 700,
           lineHeight: 1.3,
           color: header.titleColor,
+          overflowWrap: 'break-word',
         }}
       >
         {metadata.title || 'LKPD'}
@@ -30,12 +31,12 @@ export function PageHeader({ template, metadata }: { template: LKPDTemplate; met
           color: header.subtitleColor,
         }}
       >
-        <span>
+        <span style={{ minWidth: 0, overflowWrap: 'break-word' }}>
           {metadata.subject}
           {metadata.classLevel && ` • Kelas ${metadata.classLevel}`}
           {metadata.major && ` • ${metadata.major}`}
         </span>
-        <span>{metadata.schoolName}</span>
+        <span style={{ flexShrink: 0 }}>{metadata.schoolName}</span>
       </div>
     </div>
   )
